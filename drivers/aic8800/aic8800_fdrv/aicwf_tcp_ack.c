@@ -5,11 +5,11 @@
 extern int intf_tx(struct rwnx_hw *priv,struct msg_buf *msg);
 struct msg_buf *intf_tcp_alloc_msg(struct msg_buf *msg)
 {
-	//printk("%s \n",__func__);
+	//pr_debug("%s \n",__func__);
 	int len=sizeof(struct msg_buf) ;
 	msg = kzalloc(len , GFP_ATOMIC);
 	if(!msg)
-		printk("%s: alloc failed \n", __func__);
+		pr_debug("%s: alloc failed \n", __func__);
 	memset(msg,0,len);
 	return msg;
 }
@@ -17,7 +17,7 @@ struct msg_buf *intf_tcp_alloc_msg(struct msg_buf *msg)
 void intf_tcp_drop_msg(struct rwnx_hw *priv,
 					    struct msg_buf *msg)
 {
-	//printk("%s \n",__func__);
+	//pr_debug("%s \n",__func__);
 	if (msg->skb)
 		dev_kfree_skb_any(msg->skb);
 
@@ -30,7 +30,7 @@ void tcp_ack_timeout(unsigned long data)
 void tcp_ack_timeout(struct timer_list *t)
 #endif
 {
-	//printk("%s \n",__func__);
+	//pr_debug("%s \n",__func__);
 	struct tcp_ack_info *ack_info;
 	struct msg_buf *msg;
 	struct tcp_ack_manage *ack_m = NULL;
@@ -66,7 +66,7 @@ void tcp_ack_init(struct rwnx_hw *priv)
 	struct tcp_ack_info *ack_info;
 	struct tcp_ack_manage *ack_m = &priv->ack_m;
 
-	printk("========== tcp ack debug %s \n",__func__);
+	pr_debug("========== tcp ack debug %s \n",__func__);
 	memset(ack_m, 0, sizeof(struct tcp_ack_manage));
 	ack_m->priv = priv;
 	spin_lock_init(&ack_m->lock);
@@ -99,7 +99,7 @@ void tcp_ack_deinit(struct rwnx_hw *priv)
 	struct tcp_ack_manage *ack_m = &priv->ack_m;
 	struct msg_buf *drop_msg = NULL;
 
-	printk("%s \n",__func__);
+	pr_debug("%s \n",__func__);
 	atomic_set(&ack_m->enable, 0);
 
 	for (i = 0; i < TCP_ACK_NUM; i++) {
@@ -157,7 +157,7 @@ int tcp_check_quick_ack(unsigned char *buf,
 int is_drop_tcp_ack(struct tcphdr *tcphdr, int tcp_tot_len,
 				unsigned short *win_scale)
 {
-	//printk("%s \n",__func__);
+	//pr_debug("%s \n",__func__);
 	int drop = 1;
 	int len = tcphdr->doff * 4;
 	unsigned char *ptr;
@@ -192,7 +192,7 @@ int is_drop_tcp_ack(struct tcphdr *tcphdr, int tcp_tot_len,
 				case TCPOPT_WINDOW:
 					if (*ptr < 15)
 						*win_scale = (1 << (*ptr));
-					//printk("%d\n",*win_scale);
+					//pr_debug("%d\n",*win_scale);
 					break;
 				default:
 					drop = 2;
@@ -242,7 +242,7 @@ int tcp_check_ack(unsigned char *buf,
 
 	tcp_tot_len = ntohs(iphdr->tot_len) - ip_hdr_len;// tcp total len
 	ret = is_drop_tcp_ack(tcphdr, tcp_tot_len, win_scale);
-	//printk("is drop:%d \n",ret);
+	//pr_debug("is drop:%d \n",ret);
 
 	if (ret > 0) {
 		msg->saddr = iphdr->saddr;
@@ -360,7 +360,7 @@ int tcp_ack_handle(struct msg_buf *new_msgbuf,
 	int ret = 0;
 	struct msg_buf *drop_msg = NULL;
 
-	//printk("%s %d",__func__,type);
+	//pr_debug("%s %d",__func__,type);
 	write_seqlock_bh(&ack_info->seqlock);
 
 	ack_info->last_time = jiffies;
@@ -376,7 +376,7 @@ int tcp_ack_handle(struct msg_buf *new_msgbuf,
 			}
 
 			if (ack_info->msgbuf) {
-				//printk("%lx \n",ack_info->msgbuf);
+				//pr_debug("%lx \n",ack_info->msgbuf);
 				drop_msg = ack_info->msgbuf;
 				ack_info->msgbuf = NULL;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
@@ -385,13 +385,13 @@ int tcp_ack_handle(struct msg_buf *new_msgbuf,
 				del_timer(&ack_info->timer);
 #endif
 			}else{
-				//printk("msgbuf is NULL \n");
+				//pr_debug("msgbuf is NULL \n");
 			}
 
 			ack_info->in_send_msg = NULL;
 			ack_info->drop_cnt = atomic_read(&ack_m->max_drop_cnt);
 		} else {
-			printk("%s before abnormal ack: %d, %d\n",
+			pr_debug("%s before abnormal ack: %d, %d\n",
 			       __func__, ack->seq, ack_msg->seq);
 			drop_msg = new_msgbuf;
 			ret = 1;
@@ -430,7 +430,7 @@ int tcp_ack_handle(struct msg_buf *new_msgbuf,
 					  (jiffies + msecs_to_jiffies(5)));
 		}
 	} else {
-		printk("%s before ack: %d, %d\n",
+		pr_debug("%s before ack: %d, %d\n",
 		       __func__, ack->seq, ack_msg->seq);
 		drop_msg = new_msgbuf;
 		ret = 1;
@@ -455,7 +455,7 @@ int tcp_ack_handle_new(struct msg_buf *new_msgbuf,
 	int ret = 0;
 	struct msg_buf *drop_msg = NULL;
 	//struct msg_buf * send_msg = NULL;
-	//printk("",);
+	//pr_debug("",);
 	write_seqlock_bh(&ack_info->seqlock);
 
         ack_info->last_time = jiffies;
@@ -499,7 +499,7 @@ int tcp_ack_handle_new(struct msg_buf *new_msgbuf,
 		
 		//ret = 1;
 	}else {
-		printk("%s before ack: %d, %d\n",
+		pr_debug("%s before ack: %d, %d\n",
 		       __func__, ack->seq, ack_msg->seq);
 		drop_msg = new_msgbuf;
 		ret = 1;
@@ -556,7 +556,7 @@ int filter_send_tcp_ack(struct rwnx_hw *priv,
 			       struct msg_buf *msgbuf,
 			       unsigned char *buf, unsigned int plen)
 {
-//	printk("%s \n",__func__);
+//	pr_debug("%s \n",__func__);
 	int ret = 0;
 	int index, drop;
 	unsigned short win_scale = 0;
@@ -568,7 +568,7 @@ int filter_send_tcp_ack(struct rwnx_hw *priv,
 
 	tcp_ack_update(ack_m);
 	drop = tcp_check_ack(buf, &ack_msg, &win_scale);
-//	printk("drop:%d win_scale:%d",drop,win_scale);
+//	pr_debug("drop:%d win_scale:%d",drop,win_scale);
 	if (!drop && (0 == win_scale))
 		return 0;
 
@@ -587,7 +587,7 @@ int filter_send_tcp_ack(struct rwnx_hw *priv,
 			if ((win_scale!=0) && (win < (ack_m->ack_winsize * SIZE_KB)))
 			{	
 				drop = 2;
-				printk("%d %d %d",win_scale,win,(ack_m->ack_winsize * SIZE_KB));
+				pr_debug("%d %d %d",win_scale,win,(ack_m->ack_winsize * SIZE_KB));
 			}
 			ret = tcp_ack_handle_new(msgbuf, ack_m, ack_info,
 						&ack_msg, drop);

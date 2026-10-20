@@ -1,12 +1,17 @@
 #!/bin/bash
 
 #############################################################################
-# AIC8800D80 WiFi 6 Driver - Universal Installer (DKMS) - VERSÃO CORRIGIDA
-# Version: 2.0.4
-# Date: 2025-12-30
+# AIC8800D80 WiFi 6 Driver - Universal Installer (DKMS)
+# Version: 2.0.5
+# Date: 2026-09-17
 # Description: Multi-distribution installer with DKMS support
-# Supported: Debian/Ubuntu, Fedora/RHEL, Arch Linux, and derivatives
-# FIX: Corrected DKMS module configuration for aic8800_fdrv
+# Supported: Debian/Ubuntu, ALT Linux, Fedora/RHEL, Arch Linux,
+#            openSUSE, and derivatives
+# CHANGELOG:
+#   2.0.5 - Added ALT Linux (apt-rpm) support. ALT is now detected before
+#           Debian/Ubuntu because it also ships apt-get; kernel build tree
+#           package is resolved via kernel flavor (std-def/un-def/rt/...).
+#   2.0.4 - Corrected DKMS module configuration for aic8800_fdrv
 #############################################################################
 
 set -e  # Exit on error
@@ -36,7 +41,6 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 log_message() {
     local level="$1"
     shift
-    # Garantir que o arquivo de log existe e tem permissões corretas
     if [ ! -f "$LOG_FILE" ]; then
         touch "$LOG_FILE" 2>/dev/null || true
         chmod 666 "$LOG_FILE" 2>/dev/null || true
@@ -116,16 +120,16 @@ check_root() {
 
 check_secure_boot() {
     print_step "Checking Secure Boot status..."
-    
+
     local secure_boot_enabled=false
-    
+
     # Method 1: Check via mokutil
     if command -v mokutil &> /dev/null; then
         if mokutil --sb-state 2>/dev/null | grep -qi "SecureBoot enabled"; then
             secure_boot_enabled=true
         fi
     fi
-    
+
     # Method 2: Check via EFI variables (fallback)
     if [ "$secure_boot_enabled" = false ] && [ -d /sys/firmware/efi ]; then
         local secureboot_files=(/sys/firmware/efi/efivars/SecureBoot-*)
@@ -137,7 +141,7 @@ check_secure_boot() {
             fi
         fi
     fi
-    
+
     if [ "$secure_boot_enabled" = true ]; then
         echo ""
         echo -e "${YELLOW}╔════════════════════════════════════════════════════════════════╗${NC}"
@@ -164,16 +168,75 @@ check_secure_boot() {
 }
 
 #############################################################################
+# Distribution Helpers
+#############################################################################
+
+is_altlinux() {
+    [ -f /etc/altlinux-release ] && return 0
+    if [ -r /etc/os-release ] && grep -qiE '^(ID|ID_LIKE)="?alt' /etc/os-release; then
+        return 0
+    fi
+    return 1
+}
+
+is_volumio() {
+    if [ -r /etc/os-release ] && grep -Eiq '(^ID="?volumio"?$|^NAME="?volumio"?$|^PRETTY_NAME=.*volumio)' /etc/os-release; then
+        return 0
+    fi
+    return 1
+}
+
+kernel_build_tree_available() {
+    local kernel_build_dir="/lib/modules/$(uname -r)/build"
+    [ -d "$kernel_build_dir" ] && [ -r "$kernel_build_dir/Makefile" ]
+}
+
+# Returns the ALT Linux kernel flavor (e.g. "std-def", "un-def", "rt") for the
+# currently running kernel, or nothing on failure.
+# kernel-modules-std-def -> std-def
+# kernel-image-un-def    -> un-def
+alt_kernel_flavor() {
+    local kernel_release pkg flavor=""
+
+    kernel_release="$(uname -r)"
+
+    # Method 1: which package owns the modules directory of this kernel?
+    pkg=$(rpm -qf "/lib/modules/${kernel_release}" --qf '%{NAME}\n' 2>/dev/null | head -1 || true)
+
+    # Method 2: which package owns vmlinuz of this kernel?
+    if [ -z "$pkg" ] || [[ "$pkg" != kernel-* ]]; then
+        pkg=$(rpm -qf "/boot/vmlinuz-${kernel_release}" --qf '%{NAME}\n' 2>/dev/null | head -1 || true)
+    fi
+
+    # Method 3: last resort — take any installed kernel-modules-* / kernel-image-*
+    if [ -z "$pkg" ] || [[ "$pkg" != kernel-* ]]; then
+        pkg=$(rpm -qa --qf '%{NAME}\n' 'kernel-modules-*' 'kernel-image-*' 2>/dev/null | head -1 || true)
+    fi
+
+    if [[ "$pkg" =~ ^kernel-(modules|image)-(.*)$ ]]; then
+        flavor="${BASH_REMATCH[2]}"
+    fi
+
+    [ -n "$flavor" ] && printf '%s\n' "$flavor"
+    return 0
+}
+
+#############################################################################
 # Package Manager Detection and Dependency Installation
 #############################################################################
 
 detect_package_manager() {
     print_step "Detecting package manager and distribution..."
-    
+
     local pkg_manager=""
     local distro_name=""
-    
-    if command -v apt-get &> /dev/null; then
+
+    # ALT Linux must be checked BEFORE apt-get, because ALT also ships apt-get
+    # but uses RPM packages and its own repository layout.
+    if is_altlinux; then
+        pkg_manager="apt-rpm"
+        distro_name="ALT Linux"
+    elif command -v apt-get &> /dev/null; then
         pkg_manager="apt"
         distro_name="Debian/Ubuntu"
     elif command -v dnf &> /dev/null; then
@@ -201,29 +264,15 @@ detect_package_manager() {
         echo ""
         exit 1
     fi
-    
+
     print_success "Detected: $distro_name ($pkg_manager)"
     DETECTED_PKG_MANAGER="$pkg_manager"
-}
-
-is_volumio() {
-    if [ -r /etc/os-release ] && grep -Eiq '(^ID="?volumio"?$|^NAME="?volumio"?$|^PRETTY_NAME=.*volumio)' /etc/os-release; then
-        return 0
-    fi
-
-    return 1
-}
-
-kernel_build_tree_available() {
-    local kernel_build_dir="/lib/modules/$(uname -r)/build"
-
-    [ -d "$kernel_build_dir" ] && [ -r "$kernel_build_dir/Makefile" ]
 }
 
 install_dependencies() {
     local pkg_manager="$1"
     local install_kernel_headers=true
-    
+
     print_step "Installing dependencies..."
 
     if kernel_build_tree_available; then
@@ -233,8 +282,34 @@ install_dependencies() {
         install_kernel_headers=false
         print_info "Volumio detected; skipping generic kernel headers package."
     fi
-    
+
     case "$pkg_manager" in
+        apt-rpm)
+            # ALT Linux: apt-get front-end over RPM. Package names differ
+            # from Debian. The DKMS build tree is provided by
+            # kernel-headers-modules-<flavor> (std-def / un-def / rt / ...),
+            # not by kernel-headers-<X.Y>.
+            print_info "Updating package database..."
+            run_logged "Package database update" apt-get update
+
+            local -a packages=(dkms gcc make rpm-build mokutil eject usb-modeswitch)
+            if [ "$install_kernel_headers" = true ]; then
+                local flavor
+                flavor="$(alt_kernel_flavor)"
+                if [ -n "$flavor" ]; then
+                    print_info "ALT kernel flavor detected: $flavor"
+                    packages+=("kernel-headers-modules-${flavor}")
+                else
+                    print_warning "Could not detect ALT kernel flavor automatically."
+                    print_info "Falling back to 'std-def'; adjust manually if your kernel differs."
+                    packages+=("kernel-headers-modules-std-def")
+                fi
+            fi
+            print_info "Installing: ${packages[*]}..."
+            run_logged "Dependency installation" \
+                env DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+            ;;
+
         apt)
             print_info "Updating package database..."
             run_logged "Package database update" apt-get update
@@ -246,7 +321,7 @@ install_dependencies() {
             print_info "Installing: ${packages[*]}..."
             run_logged "Dependency installation" env DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
             ;;
-            
+
         dnf)
             local -a packages=(dkms make gcc mokutil util-linux usb_modeswitch)
             if [ "$install_kernel_headers" = true ]; then
@@ -255,7 +330,7 @@ install_dependencies() {
             print_info "Installing: ${packages[*]}..."
             run_logged "Dependency installation" dnf install -y "${packages[@]}"
             ;;
-            
+
         yum)
             local -a packages=(dkms make gcc mokutil util-linux usb_modeswitch)
             if [ "$install_kernel_headers" = true ]; then
@@ -266,7 +341,7 @@ install_dependencies() {
             print_info "Installing: ${packages[*]}..."
             run_logged "Dependency installation" yum install -y "${packages[@]}"
             ;;
-            
+
         pacman)
             print_info "Syncing package database..."
             run_logged "Package database sync" pacman -Sy --noconfirm
@@ -278,7 +353,7 @@ install_dependencies() {
             print_info "Installing: ${packages[*]}..."
             run_logged "Dependency installation" pacman -S --needed --noconfirm "${packages[@]}"
             ;;
-            
+
         zypper)
             local -a packages=(dkms make gcc mokutil util-linux usb_modeswitch)
             if [ "$install_kernel_headers" = true ]; then
@@ -287,13 +362,13 @@ install_dependencies() {
             print_info "Installing: ${packages[*]}..."
             run_logged "Dependency installation" zypper --non-interactive install "${packages[@]}"
             ;;
-            
+
         *)
             print_error "Unsupported package manager: $pkg_manager"
             exit 1
             ;;
     esac
-    
+
     print_success "Dependencies installed successfully."
 }
 
@@ -312,6 +387,17 @@ check_kernel_build_tree() {
         echo ""
         echo "  sudo volumio kernelsource"
         echo "  sudo ./install.sh"
+    elif is_altlinux; then
+        local flavor
+        flavor="$(alt_kernel_flavor)"
+        echo "On ALT Linux install the kernel build headers for the running kernel, e.g.:"
+        echo ""
+        if [ -n "$flavor" ]; then
+            echo "  sudo apt-get install kernel-headers-modules-${flavor}"
+        else
+            echo "  sudo apt-get install kernel-headers-modules-std-def"
+            echo "  # or kernel-headers-modules-un-def / -rt, depending on your kernel"
+        fi
     else
         echo "Install the kernel headers for your running kernel, then rerun this installer."
     fi
@@ -359,10 +445,6 @@ cleanup_legacy_bluetooth_config() {
         fi
     fi
 
-    # Remove the two issue #63 diagnostic DKMS packages before the production
-    # quirk is installed as part of aic8800/1.0.0. A patched btusb may remain
-    # active in memory until reboot, but DKMS restores the distribution module
-    # on disk when its test package is removed.
     for legacy_package in "btusb-aic-zlp/0.1" "aic-zlp-quirk/0.1"; do
         if dkms status 2>/dev/null | grep -q "^${legacy_package},"; then
             print_info "Removing superseded test package ${legacy_package}..."
@@ -392,13 +474,11 @@ install_firmware() {
 
     cleanup_legacy_bluetooth_config
 
-    # Remove old firmware versions
     if [ -d "/lib/firmware" ] && [ -n "$(find /lib/firmware -maxdepth 1 -name 'aic8800*' -type d 2>/dev/null)" ]; then
         print_info "Removing existing firmware..."
         rm -rf /lib/firmware/aic8800* >> "$LOG_FILE" 2>&1
     fi
 
-    # Copy all firmware variants
     print_info "Installing firmware for all chip variants..."
     for fw_dir in "$fw_base"/aic8800*; do
         if [ -d "$fw_dir" ]; then
@@ -411,14 +491,12 @@ install_firmware() {
 
     print_success "Firmware installed for all supported chip variants."
 
-    # Install udev rules
     local rules_source="${SCRIPT_DIR}/aic.rules"
     local rules_dest="/usr/lib/udev/rules.d/aic.rules"
 
     if [ -f "$rules_source" ]; then
         print_info "Installing udev rules to $rules_dest..."
         cp "$rules_source" "$rules_dest" >> "$LOG_FILE" 2>&1
-        # Reload udev rules
         udevadm control --reload-rules >> "$LOG_FILE" 2>&1 || true
         udevadm trigger >> "$LOG_FILE" 2>&1 || true
         print_success "Udev rules installed successfully."
@@ -426,7 +504,6 @@ install_firmware() {
         print_warning "Udev rules file not found: $rules_source"
     fi
 
-    # Install usb_modeswitch configuration for AIC8800D80 "Pandora" clone
     local modeswitch_source="${SCRIPT_DIR}/usb_modeswitch/1111_1111"
     local modeswitch_dest="/etc/usb_modeswitch.d/1111:1111"
 
@@ -443,23 +520,21 @@ install_firmware() {
 }
 
 #############################################################################
-# DKMS Configuration - CORRIGIDO v2.0.4
+# DKMS Configuration
 #############################################################################
 
 create_dkms_conf() {
     print_step "Configuring DKMS..."
-    
+
     local dkms_conf="${SCRIPT_DIR}/dkms.conf"
-    
-    # Check if dkms.conf already exists
+
     if [ -f "$dkms_conf" ]; then
         print_info "DKMS configuration file already exists."
         return 0
     fi
-    
+
     print_info "Creating dkms.conf..."
-    
-    # CORRIGIDO: Configuração para múltiplos módulos
+
     cat > "$dkms_conf" << EOF
 PACKAGE_NAME="${DRV_NAME}"
 PACKAGE_VERSION="${DRV_VERSION}"
@@ -483,7 +558,7 @@ DEST_MODULE_LOCATION[2]="/updates/dkms"
 
 AUTOINSTALL="yes"
 EOF
-    
+
     print_success "DKMS configuration created."
 }
 
@@ -493,29 +568,24 @@ EOF
 
 install_via_dkms() {
     print_step "Installing driver via DKMS..."
-    
-    # Remove existing DKMS installation if present
+
     if dkms status | grep -q "${DRV_NAME}/${DRV_VERSION}"; then
         print_info "Removing existing DKMS installation..."
         dkms remove "${DRV_NAME}/${DRV_VERSION}" --all >> "$LOG_FILE" 2>&1 || true
     fi
-    
-    # Clean up old source directory
+
     if [ -n "$SRC_DIR" ] && [ -d "$SRC_DIR" ]; then
         print_info "Cleaning up old source directory..."
         rm -rf "$SRC_DIR"
     fi
-    
-    # Copy source to /usr/src
+
     print_info "Copying source files to $SRC_DIR..."
     mkdir -p "$SRC_DIR"
     cp -r "${SCRIPT_DIR}"/* "$SRC_DIR/" >> "$LOG_FILE" 2>&1
-    
-    # Add to DKMS
+
     print_info "Adding module to DKMS..."
     dkms add -m "${DRV_NAME}" -v "${DRV_VERSION}" >> "$LOG_FILE" 2>&1
-    
-    # Build with DKMS
+
     print_info "Building module (this may take a few minutes)..."
     if ! dkms build -m "${DRV_NAME}" -v "${DRV_VERSION}" >> "$LOG_FILE" 2>&1; then
         print_error "DKMS build failed!"
@@ -527,10 +597,9 @@ install_via_dkms() {
         echo "  - Kernel version too new/old"
         exit 1
     fi
-    
+
     print_success "Module built successfully."
-    
-    # Install with DKMS
+
     print_info "Installing module..."
     if ! dkms install -m "${DRV_NAME}" -v "${DRV_VERSION}" >> "$LOG_FILE" 2>&1; then
         if grep -qi "override by specifying --force" "$LOG_FILE"; then
@@ -543,7 +612,7 @@ install_via_dkms() {
             exit 1
         fi
     fi
-    
+
     print_success "Module installed via DKMS."
     print_info "The driver will automatically rebuild after kernel updates."
 }
@@ -606,24 +675,19 @@ aic_zlp_target_present() {
 
 load_module() {
     print_step "Loading kernel modules..."
-    
-    # Update module dependencies
+
     print_info "Updating module dependencies..."
     depmod -a >> "$LOG_FILE" 2>&1
-    
+
     if lsmod | grep -q "$MODULE_NAME"; then
         print_info "Wi-Fi module already loaded. Reloading..."
         modprobe -r "$MODULE_NAME" >> "$LOG_FILE" 2>&1 || true
     fi
-    
-    # aic8800_fdrv depends on aic_load_fw, which initializes both Wi-Fi-only
-    # adapters and the Bluetooth firmware on combo adapters. If a standard HCI
-    # USB interface appears afterwards, the kernel USB modalias loads btusb.
+
     print_info "Loading $MODULE_NAME..."
     if modprobe "$MODULE_NAME" >> "$LOG_FILE" 2>&1; then
         print_success "Wi-Fi module loaded successfully."
-        
-        # Verify module is loaded
+
         print_info "Waiting for module to initialize..."
         local module_loaded=false
         for i in {1..10}; do
@@ -633,7 +697,7 @@ load_module() {
             fi
             sleep 0.5
         done
-        
+
         if [ "$module_loaded" = true ]; then
             print_success "Wi-Fi module is active in kernel."
         else
@@ -647,9 +711,6 @@ load_module() {
 
     print_info "Combo adapters use the standard btusb driver when their Bluetooth interface appears."
 
-    # The module has a USB alias and normally autoloads when 368b:8d81 appears.
-    # Explicitly load it here as well when that device was already present before
-    # DKMS installation and therefore did not generate a new modalias event.
     if aic_zlp_target_present; then
         print_info "Loading the 368b:8d81 Bluetooth ACL ZLP quirk..."
         if modprobe aic_zlp_quirk >> "$LOG_FILE" 2>&1; then
@@ -667,18 +728,16 @@ load_module() {
 
 verify_installation() {
     print_step "Verifying installation..."
-    
-    # Check DKMS status
+
     local dkms_status
     dkms_status=$(dkms status "${DRV_NAME}/${DRV_VERSION}" 2>/dev/null || echo "not found")
-    
+
     if echo "$dkms_status" | grep -q "installed"; then
         print_success "DKMS module registered: $dkms_status"
     else
         print_warning "DKMS status unclear: $dkms_status"
     fi
-    
-    # Check if the Wi-Fi module is loaded
+
     if lsmod | grep -q "$MODULE_NAME"; then
         print_success "Wi-Fi kernel module is loaded."
     else
@@ -708,8 +767,7 @@ verify_installation() {
     echo ""
     print_info "Loaded AIC modules:"
     lsmod | grep aic || echo "  (none)"
-    
-    # Check firmware
+
     local fw_count=0
     for fw_dir in /lib/firmware/aic8800*; do
         if [ -d "$fw_dir" ]; then
@@ -722,7 +780,6 @@ verify_installation() {
         print_warning "No firmware found in /lib/firmware/"
     fi
 
-    # Check for wireless interfaces
     print_info "Checking for wireless interfaces..."
     if command -v iwconfig &> /dev/null; then
         iwconfig 2>/dev/null | grep -E "wlan|IEEE" || echo "No wireless interfaces detected (hardware may not be connected)"
@@ -806,62 +863,37 @@ show_final_instructions() {
 #############################################################################
 
 main() {
-    # Initialize log file
     rm -f "$LOG_FILE" 2>/dev/null || true
     touch "$LOG_FILE" 2>/dev/null || true
     chmod 666 "$LOG_FILE" 2>/dev/null || true
-    
+
     echo -e "${CYAN}"
     echo "╔════════════════════════════════════════════════════════════════╗"
     echo "║     AIC8800D80 WiFi 6 Driver - Universal Installer (DKMS)      ║"
-    echo "║                   Version 2.0.4 (Fixed)                        ║"
+    echo "║                   Version 2.0.5                                ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
-    
+
     log_message "START" "Installation started"
     log_message "INFO" "Kernel: $(uname -r)"
     log_message "INFO" "Distribution: $(cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 | tr -d '"')"
-    
-    # Step 1: Check root privileges
+
     check_root
-    
-    # Step 2: Check Secure Boot
     check_secure_boot
-    
-    # Step 3: Detect package manager
     detect_package_manager
-    
-    # Step 4: Install dependencies
     install_dependencies "$DETECTED_PKG_MANAGER"
-
-    # Step 5: Check kernel build tree
     check_kernel_build_tree
-
-    # Step 6: Install firmware
     install_firmware
-    
-    # Step 7: Create DKMS configuration
     create_dkms_conf
-    
-    # Step 8: Install via DKMS
     install_via_dkms
-    
-    # Step 9: Refresh initramfs
     refresh_initramfs
-
-    # Step 10: Load the module
     load_module
-    
-    # Step 11: Verify installation
     verify_installation
-    
-    # Step 12: Show final instructions
     show_final_instructions
-    
+
     log_message "END" "Installation completed successfully"
 }
 
-# Execute main function
 main "$@"
 
 exit 0

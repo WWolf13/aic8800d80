@@ -150,10 +150,10 @@ static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
             if(!empty) {
                 spin_unlock_bh(&cmd_mgr->lock);
                 if(in_softirq()) {
-                    printk("in_softirq:check cmdqueue empty\n");
+                    pr_debug("in_softirq:check cmdqueue empty\n");
                     mdelay(10);
                 } else {
-                    printk("check cmdqueue empty\n");
+                    pr_debug("check cmdqueue empty\n");
                     msleep(50);
                 }
             }
@@ -220,7 +220,7 @@ static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 	) {
 		defer_push = true;
 		cmd->flags |= RWNX_CMD_FLAG_WAIT_PUSH;
-		//printk("defer push: tkn=%d\r\n", cmd->tkn);
+		//pr_debug("defer push: tkn=%d\r\n", cmd->tkn);
 	}
 
 	//spin_unlock_bh(&cmd_mgr->lock);
@@ -374,7 +374,7 @@ void cmd_mgr_task_process(struct work_struct *work)
 	    #endif
             next->flags &= ~RWNX_CMD_FLAG_WAIT_PUSH;
 
-            //printk("cmd_process, cmd->id=%d, tkn=%d\r\n",next->reqid, next->tkn);
+            //pr_debug("cmd_process, cmd->id=%d, tkn=%d\r\n",next->reqid, next->tkn);
             //rwnx_ipc_msg_push(rwnx_hw, next, RWNX_CMD_A2EMSG_LEN(next->a2e_msg));
 #ifdef AICWF_SDIO_SUPPORT
             aicwf_set_cmd_tx((void *)(sdiodev), next->a2e_msg, sizeof(struct lmac_msg) + next->a2e_msg->param_len);
@@ -572,7 +572,7 @@ void aicwf_set_cmd_tx(void *dev, struct lmac_msg *msg, uint len)
 	struct aic_usb_dev *usbdev = (struct aic_usb_dev *)dev;
 	struct aicwf_bus *bus = NULL;
     if (!usbdev->state) {
-        printk("down msg \n");
+        pr_debug("down msg \n");
         return;
     }
 	bus = usbdev->bus_if;

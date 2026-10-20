@@ -137,7 +137,7 @@ static inline int rwnx_rx_chan_switch_ind(struct rwnx_hw *rwnx_hw,
             /* Keep in mind that we have switched on the channel */
             roc_elem->on_chan = true;
         } else {
-            printk("roc_elem == null\n");
+            pr_debug("roc_elem == null\n");
         }
 
         // Enable traffic on OFF channel queue
@@ -406,10 +406,10 @@ static inline int rwnx_radar_detect_ind(struct rwnx_hw *rwnx_hw,
 	int i;
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
-    //printk("%s\n", __func__);
+    //pr_debug("%s\n", __func__);
 
     if(pulses->cnt == 0) {
-		printk("cnt error\n");
+		pr_debug("cnt error\n");
 		return -1;
     }
 
@@ -421,13 +421,13 @@ static inline int rwnx_radar_detect_ind(struct rwnx_hw *rwnx_hw,
 			p->index = (p->index + 1)%RWNX_RADAR_PULSE_MAX;
 			if(p->count < RWNX_RADAR_PULSE_MAX)
 				p->count++;
-			//printk("pulse=%x\n", pulses->pulse[i]);
+			//pr_debug("pulse=%x\n", pulses->pulse[i]);
 		}
 
 		if(!work_pending(&rwnx_hw->radar.detection_work))
 			schedule_work(&rwnx_hw->radar.detection_work);
     } else
-		printk("not enable\n");
+		pr_debug("not enable\n");
 
     return 0;
 }
@@ -825,7 +825,9 @@ static inline int rwnx_rx_scanu_result_ind(struct rwnx_hw *rwnx_hw,
 #endif
 
     }
+#ifdef CONFIG_USE_WIRELESS_EXT
 putbss:
+#endif
     if (bss != NULL)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0)
 	cfg80211_put_bss(bss);
@@ -1617,22 +1619,22 @@ static inline int rwnx_fw_panic_ind(struct rwnx_hw *rwnx_hw,
     memcpy(&fault, &ind->info[36], sizeof(struct fault_ctxt));
     memcpy(msp, &ind->info[36+sizeof(struct fault_ctxt)], 64*4);
 
-    printk("fw_panic: len=%d\n", ind->len);
-    printk("firmware: %s\n", version);
+    pr_debug("fw_panic: len=%d\n", ind->len);
+    pr_debug("firmware: %s\n", version);
 
     for(i=0; i<13; i++)
-        printk("REG %d = [%x]\n", i, fault.reg_i[i]);
-    printk("SP = [%x]\n", fault.SP);
-    printk("LR = [%x]\n", fault.LR);
-    printk("PC = [%x]\n", fault.PC);
-    printk("PSP = [%x]\n", fault.PSP);
-    printk("xPSR = [%x]\n", fault.xPSR);
-    printk("EXC_RETURN = [%x]\n", fault.EXC_RETURN);
-    printk("CONTROL = [%x]\n", fault.CONTROL);
+        pr_debug("REG %d = [%x]\n", i, fault.reg_i[i]);
+    pr_debug("SP = [%x]\n", fault.SP);
+    pr_debug("LR = [%x]\n", fault.LR);
+    pr_debug("PC = [%x]\n", fault.PC);
+    pr_debug("PSP = [%x]\n", fault.PSP);
+    pr_debug("xPSR = [%x]\n", fault.xPSR);
+    pr_debug("EXC_RETURN = [%x]\n", fault.EXC_RETURN);
+    pr_debug("CONTROL = [%x]\n", fault.CONTROL);
 
-    printk("STACK:\n");
+    pr_debug("STACK:\n");
     for(i=0; i<64; i+=4) {
-        printk("%08x, %08x, %08x, %08x\n", msp[i], msp[i+1], msp[i+2], msp[i+3]);
+        pr_debug("%08x, %08x, %08x, %08x\n", msp[i], msp[i+1], msp[i+2], msp[i+3]);
     }
 
     return 0;
@@ -1648,7 +1650,7 @@ static inline int rwnx_fw_assert_ind(struct rwnx_hw *rwnx_hw,
     memcpy(buffer, ind->info, ind->len);
     buffer[ind->len] = '\0';
 
-    printk("%s: %s\n", __func__, buffer);
+    pr_debug("%s: %s\n", __func__, buffer);
 
     return 0;
 }
@@ -1732,7 +1734,7 @@ static msg_cb_fct *msg_hdlrs[] = {
  */
 void rwnx_rx_handle_msg(struct rwnx_hw *rwnx_hw, struct ipc_e2a_msg *msg)
 {
-	//printk("%s(%d) MSG_T(msg->id):%d MSG_I(msg->id):%d cmd:%s\r\n", __func__, 
+	//pr_debug("%s(%d) MSG_T(msg->id):%d MSG_I(msg->id):%d cmd:%s\r\n", __func__, 
 	//	msg->id,
 	//	MSG_T(msg->id), 
 	//	MSG_I(msg->id),
@@ -1762,7 +1764,7 @@ void rwnx_rx_handle_print(struct rwnx_hw *rwnx_hw, u8 *msg, u32 len)
     if (!rwnx_hw->debugfs.fw_log.buf.data)
         return ;
 
-    //printk("end=%lx, len=%d\n", (unsigned long)rwnx_hw->debugfs.fw_log.buf.end, len);
+    //pr_debug("end=%lx, len=%d\n", (unsigned long)rwnx_hw->debugfs.fw_log.buf.end, len);
 
     spin_lock_bh(&rwnx_hw->debugfs.fw_log.lock);
 

@@ -45,18 +45,18 @@
 #define sdio_err(fmt, ...)          pr_err("sdio_err:<%s,%d>: " fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define usb_err(fmt, ...)           pr_err("usb_err:<%s,%d>: " fmt, __func__, __LINE__, ##__VA_ARGS__)
 #if DBG_LEVEL >= DEBUG_DEBUG_LEVEL
-#define txrx_dbg(fmt, ...)          printk("txrx: " fmt, ##__VA_ARGS__)
-#define sdio_dbg(fmt, ...)          printk("aicsdio: " fmt, ##__VA_ARGS__)
-#define usb_dbg(fmt, ...)           printk("aicusb: " fmt, ##__VA_ARGS__)
+#define txrx_dbg(fmt, ...)          pr_debug("txrx: " fmt, ##__VA_ARGS__)
+#define sdio_dbg(fmt, ...)          pr_debug("aicsdio: " fmt, ##__VA_ARGS__)
+#define usb_dbg(fmt, ...)           pr_debug("aicusb: " fmt, ##__VA_ARGS__)
 #else
 #define txrx_dbg(fmt, ...)
 #define sdio_dbg(fmt, ...)
 #define usb_dbg(fmt, ...)
 #endif
 #if DBG_LEVEL >= DEBUG_INFO_LEVEL
-#define txrx_info(fmt, ...)         printk("aicsdio: " fmt, ##__VA_ARGS__)
-#define sdio_info(fmt, ...)         printk("aicsdio: " fmt, ##__VA_ARGS__)
-#define usb_info(fmt, ...)          printk("aicusb: " fmt, ##__VA_ARGS__)
+#define txrx_info(fmt, ...)         pr_debug("aicsdio: " fmt, ##__VA_ARGS__)
+#define sdio_info(fmt, ...)         pr_debug("aicsdio: " fmt, ##__VA_ARGS__)
+#define usb_info(fmt, ...)          pr_debug("aicusb: " fmt, ##__VA_ARGS__)
 #else
 #define txrx_info(fmt, ...)
 #define sdio_info(fmt, ...)

@@ -91,7 +91,7 @@ void aicwf_bus_deinit(struct device *dev)
         txrx_err("device not found\n");
         return;
     }
-    printk("%s", __func__);
+    pr_debug("%s", __func__);
 
 	mdelay(500);
     bus_if = dev_get_drvdata(dev);
@@ -119,7 +119,7 @@ void aicwf_bus_deinit(struct device *dev)
         kthread_stop(bus_if->bustx_thread);
         bus_if->bustx_thread = NULL;
     }
-    printk("exit %s\n", __func__);
+    pr_debug("exit %s\n", __func__);
 }
 
 void aicwf_frame_tx(void *dev, struct sk_buff *skb)

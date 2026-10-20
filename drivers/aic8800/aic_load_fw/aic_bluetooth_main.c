@@ -41,8 +41,8 @@ static void aicsmac_driver_register(void)
 
 static int __init aic_bluetooth_mod_init(void)
 {
-    printk("%s \n", __func__);
-    printk("RELEASE DATE:%s \r\n", RELEASE_DATE);
+    pr_debug("%s \n", __func__);
+    pr_debug("RELEASE DATE:%s \r\n", RELEASE_DATE);
 #ifdef CONFIG_PREALLOC_RX_SKB
     aicwf_prealloc_init();
 #endif
@@ -53,7 +53,7 @@ static int __init aic_bluetooth_mod_init(void)
 
 static void __exit aic_bluetooth_mod_exit(void)
 {
-    printk("%s\n", __func__);
+    pr_debug("%s\n", __func__);
     aicwf_usb_exit();
     
 #ifdef CONFIG_PREALLOC_RX_SKB

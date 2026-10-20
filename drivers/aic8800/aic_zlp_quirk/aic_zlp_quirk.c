@@ -120,7 +120,7 @@ static void enable_zlp(struct urb *urb)
 	count = atomic64_inc_return(&injection_count);
 
 	if (count == 1)
-		pr_info("enabled ZLP on the first 368b:8d81 ACL bulk OUT URB\n");
+		pr_debug("enabled ZLP on the first 368b:8d81 ACL bulk OUT URB\n");
 }
 
 static int alloc_bulk_urb_ret_handler(struct kretprobe_instance *ri,
@@ -173,7 +173,7 @@ static int __init aic_zlp_quirk_init(void)
 	if (!ret) {
 		active_hook = AIC_ZLP_HOOK_BTUSB_RETURN;
 		hook_name = "btusb:alloc_bulk_urb";
-		pr_info("attached to system btusb for USB device 368b:8d81\n");
+		pr_debug("attached to system btusb for USB device 368b:8d81\n");
 		return 0;
 	}
 
@@ -188,7 +188,7 @@ static int __init aic_zlp_quirk_init(void)
 
 	active_hook = AIC_ZLP_HOOK_USB_SUBMIT;
 	hook_name = "usb_submit_urb";
-	pr_info("attached USB submit fallback for device 368b:8d81 interface 0\n");
+	pr_debug("attached USB submit fallback for device 368b:8d81 interface 0\n");
 	return 0;
 }
 
@@ -204,7 +204,7 @@ static void __exit aic_zlp_quirk_exit(void)
 		missed = usb_submit_urb_probe.nmissed;
 	}
 
-	pr_info("detached %s after %lld injections (%lu missed hits)\n",
+	pr_debug("detached %s after %lld injections (%lu missed hits)\n",
 		hook_name, (long long)atomic64_read(&injection_count), missed);
 }
 

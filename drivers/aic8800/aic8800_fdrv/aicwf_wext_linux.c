@@ -789,11 +789,11 @@ static inline char *aicwf_get_iwe_stream_wpa_wpa2(struct rwnx_hw* rwnx_hw,
 					p += sprintf(p, "%02x", wpa_ie[i]);
 
 				if (wpa_len > 100) {
-					printk("-----------------Len %d----------------\n", wpa_len);
+					pr_debug("-----------------Len %d----------------\n", wpa_len);
 					for (i = 0; i < wpa_len; i++)
-						printk("%02x ", wpa_ie[i]);
-					printk("\n");
-					printk("-----------------Len %d----------------\n", wpa_len);
+						pr_debug("%02x ", wpa_ie[i]);
+					pr_debug("\n");
+					pr_debug("-----------------Len %d----------------\n", wpa_len);
 				}
 
 				memset(iwe, 0, sizeof(*iwe));
@@ -941,7 +941,7 @@ static int aicwf_set_scan(struct net_device *dev, struct iw_request_info *a,
 	AICWFDBG(LOGTRACE, "%s Enter", __func__);
 
 	if(wiphy == NULL){
-		printk("aic_wiphy error \r\n");
+		pr_debug("aic_wiphy error \r\n");
 
 	}
 

@@ -833,7 +833,7 @@ int rwnx_plat_bin_fw_upload_2(struct rwnx_hw *rwnx_hw, u32 fw_addr,
 	AICWFDBG(LOGINFO, "size=%d, dst[0]=%x\n", size, dst[0]);
     if (size > 512) {
         for (; i < (size - 512); i += 512) {
-            //printk("wr blk 0: %p -> %x\r\n", dst + i / 4, fw_addr + i);
+            //pr_debug("wr blk 0: %p -> %x\r\n", dst + i / 4, fw_addr + i);
             err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fw_addr + i, 512, dst + i / 4);
             if (err) {
                 AICWFDBG(LOGERROR, "bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
@@ -842,7 +842,7 @@ int rwnx_plat_bin_fw_upload_2(struct rwnx_hw *rwnx_hw, u32 fw_addr,
         }
     }
     if (!err && (i < size)) {
-        //printk("wr blk 1: %p -> %x\r\n", dst + i / 4, fw_addr + i);
+        //pr_debug("wr blk 1: %p -> %x\r\n", dst + i / 4, fw_addr + i);
         err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fw_addr + i, size - i, dst + i / 4);
         if (err) {
             AICWFDBG(LOGERROR, "bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
@@ -896,7 +896,7 @@ int rwnx_plat_bin_fw_upload_2_with_version(struct rwnx_hw *rwnx_hw, u32 fw_addr,
     // upload
     if (size > 512) {
         for (; i < (size - 512); i += 512) {
-            //printk("wr blk 0: %p -> %x\r\n", dst + i / 4, fw_addr + i);
+            //pr_debug("wr blk 0: %p -> %x\r\n", dst + i / 4, fw_addr + i);
             err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fw_addr + i, 512, dst + i / 4);
             if (err) {
                 AICWFDBG(LOGERROR, "bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
@@ -905,7 +905,7 @@ int rwnx_plat_bin_fw_upload_2_with_version(struct rwnx_hw *rwnx_hw, u32 fw_addr,
         }
     }
     if (!err && (i < size)) {
-        //printk("wr blk 1: %p -> %x\r\n", dst + i / 4, fw_addr + i);
+        //pr_debug("wr blk 1: %p -> %x\r\n", dst + i / 4, fw_addr + i);
         err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fw_addr + i, size - i, dst + i / 4);
         if (err) {
             AICWFDBG(LOGERROR, "bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
@@ -944,21 +944,21 @@ static int aic_load_firmware(u32 ** fw_buf, const char *name,
 
         len = snprintf(path, FW_PATH_MAX_LEN, "%s/%s",aic_fw_path, name);
         if (len >= FW_PATH_MAX_LEN) {
-                printk("%s: %s file's path too long\n", __func__, name);
+                pr_debug("%s: %s file's path too long\n", __func__, name);
                 *fw_buf=NULL;
                 __putname(path);
                 return -1;
         }
 
-        printk("%s :firmware path = %s  \n", __func__ ,path);
+        pr_debug("%s :firmware path = %s  \n", __func__ ,path);
 
 
         /* open the firmware file */
         fp=filp_open(path, O_RDONLY, 0);
         if(IS_ERR(fp) || (!fp)){
-	        printk("%s: %s file failed to open\n", __func__, name);
+	        pr_debug("%s: %s file failed to open\n", __func__, name);
                 if(IS_ERR(fp))
-			printk("is_Err\n");
+			pr_debug("is_Err\n");
 		*fw_buf=NULL;
                 __putname(path);
                 fp=NULL;
@@ -967,7 +967,7 @@ static int aic_load_firmware(u32 ** fw_buf, const char *name,
 
         size = i_size_read(file_inode(fp));
         if(size<=0){
-                printk("%s: %s file size invalid %d\n", __func__, name, size);
+                pr_debug("%s: %s file size invalid %d\n", __func__, name, size);
                 *fw_buf=NULL;
                 __putname(path);
                 filp_close(fp,NULL);
@@ -993,7 +993,7 @@ static int aic_load_firmware(u32 ** fw_buf, const char *name,
         #endif
 
         if(size != rdlen){
-                printk("%s: %s file rdlen invalid %ld\n", __func__, name, (long int)rdlen);
+                pr_debug("%s: %s file rdlen invalid %ld\n", __func__, name, (long int)rdlen);
                 *fw_buf=NULL;
                 __putname(path);
                 filp_close(fp,NULL);
@@ -1009,7 +1009,7 @@ static int aic_load_firmware(u32 ** fw_buf, const char *name,
 
        /*start to transform the data format*/
         src = (u32*)buffer;
-        printk("malloc dst\n");
+        pr_debug("malloc dst\n");
         dst = (u32*)kzalloc(size,GFP_KERNEL);
 
         if(!dst){
@@ -1057,7 +1057,7 @@ static int rwnx_plat_bin_fw_upload_android(struct rwnx_hw *rwnx_hw, u32 fw_addr,
         /* load aic firmware */
         size = aic_load_firmware(&dst, filename, dev);
         if(size<=0){
-                printk("wrong size of firmware file\n");
+                pr_debug("wrong size of firmware file\n");
                 kfree(dst);
                 dst = NULL;
                 return -1;
@@ -1065,13 +1065,13 @@ static int rwnx_plat_bin_fw_upload_android(struct rwnx_hw *rwnx_hw, u32 fw_addr,
 
 
     /* Copy the file on the Embedded side */
-    printk("\n### Upload %s firmware, @ = %x  size=%d\n", filename, fw_addr, size);
+    pr_debug("\n### Upload %s firmware, @ = %x  size=%d\n", filename, fw_addr, size);
 
     if (size > 1024) {// > 1KB data
         for (i = 0; i < (size - 1024); i += 1024) {//each time write 1KB
             err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fw_addr + i, 1024, dst + i / 4);
                         if (err) {
-                printk("bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
+                pr_debug("bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
                 break;
             }
         }
@@ -1080,7 +1080,7 @@ static int rwnx_plat_bin_fw_upload_android(struct rwnx_hw *rwnx_hw, u32 fw_addr,
     if (!err && (i < size)) {// <1KB data
         err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fw_addr + i, size - i, dst + i / 4);
         if (err) {
-            printk("bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
+            pr_debug("bin upload fail: %x, err:%d\r\n", fw_addr + i, err);
         }
     }
 
@@ -1669,7 +1669,8 @@ static int rwnx_plat_patch_load(struct rwnx_hw *rwnx_hw)
     if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8800DC ||
         rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8800DW){
 #ifndef ANDROID_PLATFORM
-        sprintf(aic_fw_path, "%s/%s", aic_fw_path, "aic8800DC");
+        if (strlcat(aic_fw_path, "/aic8800DC", sizeof(aic_fw_path)) >= sizeof(aic_fw_path))
+            return -ENAMETOOLONG;
 #endif
         AICWFDBG(LOGINFO, "testmode=%d\n", testmode);
         if (chip_sub_id == 0) {
@@ -1808,7 +1809,8 @@ static int rwnx_plat_patch_load(struct rwnx_hw *rwnx_hw)
         }
     } else if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8800D80N) {
 #ifndef ANDROID_PLATFORM
-        sprintf(aic_fw_path, "%s/%s", aic_fw_path, "aic8800D80N");
+        if (strlcat(aic_fw_path, "/aic8800D80N", sizeof(aic_fw_path)) >= sizeof(aic_fw_path))
+            return -ENAMETOOLONG;
 #endif
         if (testmode == FW_NORMAL_MODE) {
             ret = aicwf_plat_patch_load_8800d80n(rwnx_hw);
@@ -1838,7 +1840,8 @@ static int rwnx_plat_patch_load(struct rwnx_hw *rwnx_hw)
     }
     else if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8800DLN) {
 #ifndef ANDROID_PLATFORM
-        sprintf(aic_fw_path, "%s/%s", aic_fw_path, "aic8800DLN");
+        if (strlcat(aic_fw_path, "/aic8800DLN", sizeof(aic_fw_path)) >= sizeof(aic_fw_path))
+            return -ENAMETOOLONG;
 #endif
         if (testmode == FW_NORMAL_MODE) {
             aicwf_patch_config_8800dln(rwnx_hw);

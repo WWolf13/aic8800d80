@@ -65,7 +65,7 @@ void system_config_8800dln(struct rwnx_hw *rwnx_hw)
         return;
     }
     chip_id = (u8)(rd_mem_addr_cfm.memdata >> 16);
-    //printk("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
+    //pr_debug("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
     if (((rd_mem_addr_cfm.memdata >> 25) & 0x01UL) == 0x00UL) {
         chip_mcu_id = 1;
     }
@@ -76,7 +76,7 @@ void system_config_8800dln(struct rwnx_hw *rwnx_hw)
         return;
     }
     chip_sub_id = (u8)(rd_mem_addr_cfm.memdata);
-    //printk("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
+    //pr_debug("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
     AICWFDBG(LOGINFO, "chip_id=%x, chip_sub_id=%x\n", chip_id, chip_sub_id);
 
     syscfg_num = sizeof(syscfg_tbl_masked_8800dln) / sizeof(u32) / 3;

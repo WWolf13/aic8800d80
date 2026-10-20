@@ -2496,10 +2496,10 @@ int rwnx_get_patch_addr_from_patch_table(struct rwnx_hw *rwnx_hw, char *filename
     size = rwnx_request_firmware_common(rwnx_hw, (u32 **)&rawdata, filename);
 
     /* Copy the file on the Embedded side */
-    printk("### Upload %s fw_patch_table, size=%d\n", filename, size);
+    pr_debug("### Upload %s fw_patch_table, size=%d\n", filename, size);
 
     if (size <= 0) {
-        printk("wrong size of firmware file\n");
+        pr_debug("wrong size of firmware file\n");
         ret = -1;
         goto err;
     }
@@ -2507,14 +2507,14 @@ int rwnx_get_patch_addr_from_patch_table(struct rwnx_hw *rwnx_hw, char *filename
     p = rawdata;
 
     if (memcmp(p, AICBT_PT_TAG, sizeof(AICBT_PT_TAG) < 16 ? sizeof(AICBT_PT_TAG) : 16)) {
-        printk("TAG err\n");
+        pr_debug("TAG err\n");
         ret = -1;
         goto err;
     }
     p += 16;
 
     while (p - rawdata < size) {
-        printk("size = %d  p - rawdata = 0x%0lx \r\n", size, p - rawdata);
+        pr_debug("size = %d  p - rawdata = 0x%0lx \r\n", size, p - rawdata);
         p += 16;
 
         type = *(uint32_t *)p;
@@ -2522,7 +2522,7 @@ int rwnx_get_patch_addr_from_patch_table(struct rwnx_hw *rwnx_hw, char *filename
 
         len = *(uint32_t *)p;
         p += 4;
-        printk("cur->type %x, len %d\n", type, len);
+        pr_debug("cur->type %x, len %d\n", type, len);
 
         if(type >= 1000 ) {//Temp Workaround
             len = 0;
@@ -2530,9 +2530,9 @@ int rwnx_get_patch_addr_from_patch_table(struct rwnx_hw *rwnx_hw, char *filename
             data = (uint32_t *)p;
             if (type == AICBT_PT_NULL) {
                 *(fw_patch_base_addr) = *(data + 3);
-                printk("addr found %x\n", *(fw_patch_base_addr));
+                pr_debug("addr found %x\n", *(fw_patch_base_addr));
                 for (j = 0; j < len; j++) {
-                    printk("addr %x\n", *(data+j));
+                    pr_debug("addr %x\n", *(data+j));
                 }
                 break;
             }
@@ -2594,12 +2594,12 @@ int rwnx_patch_table_load(struct rwnx_hw *rwnx_hw, struct aicbt_patch_table *_he
 
         if (p->type == AICBT_PT_VER) {
             char *data_s = (char *)p->data;
-            printk("patch version %s\n", data_s);
+            pr_debug("patch version %s\n", data_s);
             continue;
         }
 
         if (p->len == 0) {
-            printk("len is 0\n");
+            pr_debug("len is 0\n");
             continue;
         }
 
@@ -2632,10 +2632,10 @@ int rwnx_patch_table_download(struct rwnx_hw *rwnx_hw, char *filename)
     size = rwnx_request_firmware_common(rwnx_hw, (u32 **)&rawdata, filename);
 
     /* Copy the file on the Embedded side */
-    printk("### Upload %s fw_patch_table, size=%d\n", filename, size);
+    pr_debug("### Upload %s fw_patch_table, size=%d\n", filename, size);
 
     if (size <= 0) {
-        printk("wrong size of firmware file\n");
+        pr_debug("wrong size of firmware file\n");
         ret = -1;
         goto err;
     }
@@ -2643,14 +2643,14 @@ int rwnx_patch_table_download(struct rwnx_hw *rwnx_hw, char *filename)
     p = rawdata;
 
     if (memcmp(p, AICBT_PT_TAG, sizeof(AICBT_PT_TAG) < 16 ? sizeof(AICBT_PT_TAG) : 16)) {
-        printk("TAG err\n");
+        pr_debug("TAG err\n");
         ret = -1;
         goto err;
     }
     p += 16;
 
     while (p - rawdata < size) {
-        printk("size = %d  p - rawdata = 0x%0lx \r\n", size, p - rawdata);
+        pr_debug("size = %d  p - rawdata = 0x%0lx \r\n", size, p - rawdata);
         new = (struct aicbt_patch_table *)vmalloc(sizeof(struct aicbt_patch_table));
         memset(new, 0, sizeof(struct aicbt_patch_table));
         if (head == NULL) {
@@ -2671,7 +2671,7 @@ int rwnx_patch_table_download(struct rwnx_hw *rwnx_hw, char *filename)
 
         cur->len = *(uint32_t *)p;
         p += 4;
-        printk("cur->type %x, len %d\n", cur->type, cur->len);
+        pr_debug("cur->type %x, len %d\n", cur->type, cur->len);
 
         if((cur->type )  >= 1000 ) {//Temp Workaround
             cur->len = 0;
@@ -2685,7 +2685,7 @@ int rwnx_patch_table_download(struct rwnx_hw *rwnx_hw, char *filename)
 
     vfree(rawdata);
     rwnx_patch_table_load(rwnx_hw, head);
-    printk("fw_patch_table download complete\n\n");
+    pr_debug("fw_patch_table download complete\n\n");
 
     return ret;
 err:
@@ -2737,7 +2737,7 @@ int aicwf_patch_table_load(struct rwnx_hw *rwnx_hw, char *filename)
 	if (!err && (i < size)) {
 		err = rwnx_send_dbg_mem_block_write_req(rwnx_hw, fmacfw_patch_tbl_8800dc_u02_describe_base, fmacfw_patch_tbl_8800dc_u02_describe_size + 4, dst);
 		if(err){
-			printk("write describe information fail \n");
+			pr_debug("write describe information fail \n");
 		}
 
 		describle = kzalloc(fmacfw_patch_tbl_8800dc_u02_describe_size, GFP_KERNEL);
@@ -2978,7 +2978,7 @@ void aicwf_patch_config_8800dc(struct rwnx_hw *rwnx_hw)
         } else if (chip_sub_id == 1) {
             ret = aicwf_patch_table_load(rwnx_hw, RWNX_MAC_PATCH_TABLE_8800DC_U02);
             if(ret){
-                printk("patch_tbl upload fail: err:%d\r\n", ret);
+                pr_debug("patch_tbl upload fail: err:%d\r\n", ret);
             }
 #ifdef CONFIG_FOR_IPCAM
             if ((ret = rwnx_send_dbg_mem_write_req(rwnx_hw, 0x00111944, 0x00000101))) {
@@ -2988,14 +2988,14 @@ void aicwf_patch_config_8800dc(struct rwnx_hw *rwnx_hw)
         } else if (chip_sub_id == 2) {
             ret = aicwf_patch_table_load(rwnx_hw, RWNX_MAC_PATCH_TABLE_8800DC_H_U02);
             if(ret){
-                printk("patch_tbl upload fail: err:%d\r\n", ret);
+                pr_debug("patch_tbl upload fail: err:%d\r\n", ret);
             }
             ret = aicwf_patch_var_config_8800dc(rwnx_hw);
             if (ret) {
-                printk("patch_var cfg fail: err:%d\r\n", ret);
+                pr_debug("patch_var cfg fail: err:%d\r\n", ret);
             }
         } else {
-            printk("unsupported id: %d\n", chip_sub_id);
+            pr_debug("unsupported id: %d\n", chip_sub_id);
         }
 
         #endif
@@ -3128,7 +3128,7 @@ int aicwf_plat_patch_load_8800dc(struct rwnx_hw *rwnx_hw)
 		uint32_t fw_ram_patch_base_addr = FW_RAM_PATCH_BASE_ADDR;
 		ret = rwnx_get_patch_addr_from_patch_table(rwnx_hw, FW_PATCH_TABLE_NAME_U02, &fw_ram_patch_base_addr);
 		//bt patch
-		printk("%s %x\n", __func__, fw_ram_patch_base_addr);
+		pr_debug("%s %x\n", __func__, fw_ram_patch_base_addr);
 		ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, FW_8800DC_U02_ADID_ADDR, FW_ADID_BASE_NAME);
 		//fw_ram_patch_base_addr, FW_PATCH_BASE_NAME_U02
 		ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, fw_ram_patch_base_addr, FW_PATCH_BASE_NAME_U02);
@@ -3142,7 +3142,7 @@ int aicwf_plat_patch_load_8800dc(struct rwnx_hw *rwnx_hw)
 		uint32_t fw_ram_patch_base_addr = FW_RAM_PATCH_BASE_ADDR;
 		ret = rwnx_get_patch_addr_from_patch_table(rwnx_hw, FW_PATCH_TABLE_NAME_U02, &fw_ram_patch_base_addr);
 		//bt patch
-		printk("%s %x\n", __func__, fw_ram_patch_base_addr);
+		pr_debug("%s %x\n", __func__, fw_ram_patch_base_addr);
 		ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, FW_8800DC_U02_ADID_ADDR, FW_ADID_BASE_NAME);
 		//fw_ram_patch_base_addr, FW_PATCH_BASE_NAME_U02
 		ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, fw_ram_patch_base_addr, FW_PATCH_BASE_NAME_U02H);
@@ -3152,7 +3152,7 @@ int aicwf_plat_patch_load_8800dc(struct rwnx_hw *rwnx_hw)
 		//wifi patch
         ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, ROM_FMAC_PATCH_ADDR, RWNX_MAC_PATCH_NAME2_8800DC_H_U02);
     } else {
-        printk("unsupported id: %d\n", chip_sub_id);
+        pr_debug("unsupported id: %d\n", chip_sub_id);
     }
 #endif
     return ret;
@@ -3747,7 +3747,7 @@ void system_config_8800dc(struct rwnx_hw *rwnx_hw){
         return;
     }
     chip_id = (u8)(rd_mem_addr_cfm.memdata >> 16);
-    //printk("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
+    //pr_debug("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
     if (((rd_mem_addr_cfm.memdata >> 25) & 0x01UL) == 0x00UL) {
         chip_mcu_id = 1;
     }
@@ -3758,7 +3758,7 @@ void system_config_8800dc(struct rwnx_hw *rwnx_hw){
         return;
     }
     chip_sub_id = (u8)(rd_mem_addr_cfm.memdata);
-    //printk("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
+    //pr_debug("%x=%x\n", rd_mem_addr_cfm.memaddr, rd_mem_addr_cfm.memdata);
 	AICWFDBG(LOGINFO, "chip_id=%x, chip_sub_id=%x\n", chip_id, chip_sub_id);
 
 
@@ -3771,9 +3771,9 @@ void system_config_8800dc(struct rwnx_hw *rwnx_hw){
 	//Crystal provided by CPU (end)
 
 	ret = rwnx_send_dbg_mem_read_req(rwnx_hw, 0x40500010, &rd_mem_addr_cfm);
-	printk("[0x40500010]=%x\n", rd_mem_addr_cfm.memdata);
+	pr_debug("[0x40500010]=%x\n", rd_mem_addr_cfm.memdata);
 	if (ret) {
-	    printk("[0x40500010] rd fail: %d\n", ret);
+	    pr_debug("[0x40500010] rd fail: %d\n", ret);
 	    return;
 	}
 

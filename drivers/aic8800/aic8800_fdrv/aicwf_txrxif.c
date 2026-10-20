@@ -396,7 +396,7 @@ int aicwf_tasklet_rxframes(struct aicwf_rx_priv *rx_priv)
 		}
 		data = skb->data;
 		pkt_len = (*skb->data | (*(skb->data + 1) << 8));
-		//printk("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
+		//pr_debug("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
 #ifndef CONFIG_USB_RX_REASSEMBLE
 		if (pkt_len > skb->len) {
 			AICWFDBG(LOGERROR, "%s pkt_len:%d skb->len:%d\r\n", __func__, pkt_len, skb->len);
@@ -583,7 +583,7 @@ int aicwf_process_rxframes(struct aicwf_rx_priv *rx_priv)
                 cnt++;
                 data = buffer->read;
                 pkt_len = (*data | (*(data + 1) << 8));
-                //printk("%s cnt:%d pkt_len:%d \r\n", __func__, cnt, pkt_len);
+                //pr_debug("%s cnt:%d pkt_len:%d \r\n", __func__, cnt, pkt_len);
 #ifndef CONFIG_USB_RX_REASSEMBLE
                 if (pkt_len > buffer->len) {
                     AICWFDBG(LOGERROR, "%s pkt_len:%d buffer->len:%d\r\n", __func__, pkt_len, buffer->len);
@@ -664,7 +664,7 @@ int aicwf_process_rxframes(struct aicwf_rx_priv *rx_priv)
             }
             data = buffer->data;
             pkt_len = (*data | (*(data + 1) << 8));
-            //printk("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
+            //pr_debug("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
 #ifndef CONFIG_USB_RX_REASSEMBLE
             if (pkt_len > buffer->len) {
                 AICWFDBG(LOGERROR, "%s pkt_len:%d buffer->len:%d\r\n", __func__, pkt_len, buffer->len);
@@ -741,12 +741,12 @@ int aicwf_process_rxframes(struct aicwf_rx_priv *rx_priv)
             while(aicwf_another_ptk(skb)) {
                 cnt++;
                 if (cnt > 30) {
-                    //printk("%s err, break %d\n", __func__, cnt);
+                    //pr_debug("%s err, break %d\n", __func__, cnt);
                     //break;
                 }
                 data = skb->data;
                 pkt_len = (*skb->data | (*(skb->data + 1) << 8));
-                //printk("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
+                //pr_debug("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
 #ifndef CONFIG_USB_RX_REASSEMBLE
                 if (pkt_len > skb->len) {
                     AICWFDBG(LOGERROR, "%s pkt_len:%d skb->len:%d\r\n", __func__, pkt_len, skb->len);
@@ -826,7 +826,7 @@ int aicwf_process_rxframes(struct aicwf_rx_priv *rx_priv)
             }
             data = skb->data;
             pkt_len = (*skb->data | (*(skb->data + 1) << 8));
-            //printk("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
+            //pr_debug("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
 #ifndef CONFIG_USB_RX_REASSEMBLE
             if (pkt_len > skb->len) {
                 AICWFDBG(LOGERROR, "%s pkt_len:%d skb->len:%d\r\n", __func__, pkt_len, skb->len);
@@ -904,7 +904,7 @@ int aicwf_process_msg_rxframes(struct aicwf_rx_priv *rx_priv)
         }
         data = skb->data;
         pkt_len = (*skb->data | (*(skb->data + 1) << 8));
-        //printk("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
+        //pr_debug("p:%d, s:%d , %x\n", pkt_len, skb->len, data[2]);
 #if 0 //amsdu > 1600
         if (pkt_len > 1600) {
             dev_kfree_skb(skb);
@@ -1317,12 +1317,12 @@ struct rx_buff *rxbuff_dequeue(struct rx_frame_queue *pq)
     struct rx_buff *p = NULL;
 
     if (pq->qcnt == 0) {
-        printk("%s %d, rxq is empty\n", __func__, __LINE__);
+        pr_debug("%s %d, rxq is empty\n", __func__, __LINE__);
         return NULL;
     }
 
     if(list_empty(&pq->queuelist)) {
-        printk("%s %d, rxq is empty\n", __func__, __LINE__);
+        pr_debug("%s %d, rxq is empty\n", __func__, __LINE__);
         return NULL;
     } else {
         p = list_first_entry(&pq->queuelist, struct rx_buff, queue);
@@ -1338,7 +1338,7 @@ bool aicwf_rxbuff_enqueue(struct device *dev, struct rx_frame_queue *rxq, struct
 //    struct rx_buff *p = NULL;
 
     if ((rxq == NULL) || (pkt == NULL)) {
-        printk("%s %d, rxq or pkt is NULL\n", __func__, __LINE__);
+        pr_debug("%s %d, rxq or pkt is NULL\n", __func__, __LINE__);
         return false;
     }
 
@@ -1346,11 +1346,11 @@ bool aicwf_rxbuff_enqueue(struct device *dev, struct rx_frame_queue *rxq, struct
         if (rxbuff_queue_penq(rxq, pkt)) {
             return true;
         } else {
-            printk("%s %d, rxbuff enqueue fail\n", __func__, __LINE__);
+            pr_debug("%s %d, rxbuff enqueue fail\n", __func__, __LINE__);
             return false;
         }
     } else {
-        printk("%s %d, rxq or pkt is full\n", __func__, __LINE__);
+        pr_debug("%s %d, rxq or pkt is full\n", __func__, __LINE__);
         return false;
     }
 }

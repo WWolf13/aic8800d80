@@ -1,0 +1,10 @@
+*.ko
+*.o
+*.cmd
+Module.symvers
+modules.order
+*.mod
+*.mod.c
+*.symvers
+Makefile.txt
+install.sh_save

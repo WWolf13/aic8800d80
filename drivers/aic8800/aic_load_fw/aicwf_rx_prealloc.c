@@ -51,7 +51,7 @@ struct rx_buff *aicwf_prealloc_rxbuff_alloc(spinlock_t *lock)
         atomic_dec(&aic_rx_buff_list.rxbuff_list_len);
 	}
     spin_unlock_irqrestore(lock, flags);
-    //printk("len:%d\n", aic_rx_buff_list.rxbuff_list_len);
+    //pr_debug("len:%d\n", aic_rx_buff_list.rxbuff_list_len);
     memset(rxbuff->data, 0, aic_rxbuff_size);
     rxbuff->len = 0;
     rxbuff->start = NULL;

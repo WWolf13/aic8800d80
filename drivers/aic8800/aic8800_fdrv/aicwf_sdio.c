@@ -287,7 +287,7 @@ int platform_wifi_power_on(void)
 	mdelay(1000);
 	sunxi_mmc_rescan_card(wlan_bus_index);
 
-	printk("platform_wifi_power_on");
+	pr_debug("platform_wifi_power_on");
 
 	return ret;
 }
@@ -296,15 +296,15 @@ void platform_wifi_power_off(void)
 {
 	int wlan_bus_index = sunxi_wlan_get_bus_index();
     if(wlan_bus_index < 0) {
-		printk("no wlan_bus_index\n");
+		pr_debug("no wlan_bus_index\n");
 		return ;
 	}
-	printk("power_off\n");
+	pr_debug("power_off\n");
 	sunxi_wlan_set_power(0);
     mdelay(100);
     //sunxi_mmc_rescan_card(wlan_bus_index);
 
-    printk("platform_wifi_power_off");
+    pr_debug("platform_wifi_power_off");
 }
 #endif
 void aicwf_sdio_register(void)
@@ -324,7 +324,7 @@ void aicwf_sdio_register(void)
 #ifdef CONFIG_NANOPI_M4
     if(aic_host_drv->card == NULL){
         __mmc_claim_host(aic_host_drv,NULL);
-        printk("aic: >>>mmc_rescan_try_freq\n");
+        pr_debug("aic: >>>mmc_rescan_try_freq\n");
         mmc_rescan_try_freq(aic_host_drv,aic_max_freqs);
         mmc_release_host(aic_host_drv);
     }

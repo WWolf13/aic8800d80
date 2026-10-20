@@ -61,7 +61,7 @@ volatile struct txdesc_host *aicwf_usb_host_txdesc_get(struct usb_host_env_tag *
  */
 void aicwf_usb_host_txdesc_push(struct usb_host_env_tag *env, const int queue_idx, const uint64_t host_id)
 {
-    //printk("push, %d, %d, 0x%llx \r\n", queue_idx, env->txdesc_free_idx[queue_idx], host_id);
+    //pr_debug("push, %d, %d, 0x%llx \r\n", queue_idx, env->txdesc_free_idx[queue_idx], host_id);
     // Save the host id in the environment
     env->tx_host_id[queue_idx][env->txdesc_free_idx[queue_idx] % USB_TXDESC_CNT] = host_id;
 
@@ -81,7 +81,7 @@ void aicwf_usb_host_tx_cfm_handler(struct usb_host_env_tag *env, u32 *data)
     struct sk_buff *skb = NULL;
     struct rwnx_txhdr *txhdr;
 	AICWFDBG(LOGTRACE, "%s Enter \n", __func__);
-    //printk("sdio_host_tx_cfm_handler, %d, 0x%08x\r\n", queue_idx, data[1]);
+    //pr_debug("sdio_host_tx_cfm_handler, %d, 0x%08x\r\n", queue_idx, data[1]);
     // TX confirmation descriptors have been received
    // REG_SW_SET_PROFILING(env->pthis, SW_PROF_IRQ_E2A_TXCFM);
     //while (1)

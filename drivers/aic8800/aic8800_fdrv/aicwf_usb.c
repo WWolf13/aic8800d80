@@ -188,7 +188,7 @@ static void usb_txc_sta_flowctrl(struct aicwf_usb_buf *usb_buf, struct aic_usb_d
 		hostdesc = (struct txdesc_api *)((u8 *)usb_buf->skb + 4);
 	else
 		hostdesc = (struct txdesc_api *)((u8 *)usb_buf->skb->data + 4);
-	//printk("txcpl: sta %d\n", hostdesc->host.staid);
+	//pr_debug("txcpl: sta %d\n", hostdesc->host.staid);
 	sta_idx = hostdesc->host.staid;
 	if(sta_idx < NX_REMOTE_STA_MAX && !(hostdesc->host.flags & TXU_CNTRL_MGMT)) {
 		struct rwnx_vif *vif = NULL;
@@ -196,7 +196,7 @@ static void usb_txc_sta_flowctrl(struct aicwf_usb_buf *usb_buf, struct aic_usb_d
 		vif = usb_dev->rwnx_hw->vif_table[sta->vif_idx];
 		spin_lock_irqsave(&usb_dev->tx_flow_lock, flags);
 		atomic_dec(&usb_dev->rwnx_hw->sta_flowctrl[sta_idx].tx_pending_cnt);
-		//printk("sta:%d, pending:%d, flowctrl=%d\n", sta->sta_idx, sta->tx_pending_cnt, sta->flowctrl);
+		//pr_debug("sta:%d, pending:%d, flowctrl=%d\n", sta->sta_idx, sta->tx_pending_cnt, sta->flowctrl);
 		if(RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_AP) {
 			if(atomic_read(&usb_dev->rwnx_hw->sta_flowctrl[sta_idx].tx_pending_cnt) < AICWF_USB_FC_PERSTA_LOW_WATER &&
 							usb_dev->rwnx_hw->sta_flowctrl[sta_idx].flowctrl) {
@@ -275,7 +275,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
     atomic_dec(&rx_urb_cnt);
     if(atomic_read(&rx_urb_cnt) < 10){
         AICWFDBG(LOGDEBUG, "%s %d \r\n", __func__, atomic_read(&rx_urb_cnt));
-        //printk("%s %d \r\n", __func__, atomic_read(&rx_urb_cnt));
+        //pr_debug("%s %d \r\n", __func__, atomic_read(&rx_urb_cnt));
     }
 
     if(!usb_dev->rwnx_hw){
@@ -309,7 +309,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
         spin_lock_irqsave(&rx_priv->rxqlock, flags);
         //if (aicwf_usb_rx_aggr) {
             rx_buff->len = urb->actual_length;
-            //printk("%s rx_buff->len:%d \r\n", __func__, rx_buff->len);
+            //pr_debug("%s rx_buff->len:%d \r\n", __func__, rx_buff->len);
         //}
 
         if(!aicwf_rxbuff_enqueue(usb_dev->dev, &rx_priv->rxq, rx_buff)){
@@ -350,7 +350,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
 	atomic_dec(&rx_urb_cnt);
 	if(atomic_read(&rx_urb_cnt) < 10){
 		AICWFDBG(LOGDEBUG, "%s %d \r\n", __func__, atomic_read(&rx_urb_cnt));
-		//printk("%s %d \r\n", __func__, atomic_read(&rx_urb_cnt));
+		//pr_debug("%s %d \r\n", __func__, atomic_read(&rx_urb_cnt));
 	}
 
 	if(!usb_dev->rwnx_hw){
@@ -383,7 +383,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
 
 #if 0
     if ((urb->actual_length > 1600 * 30) && (aicwf_usb_rx_aggr)) {
-	printk("r%d\n", urb->actual_length);
+	pr_debug("r%d\n", urb->actual_length);
     }
 #endif
 
@@ -1638,7 +1638,7 @@ static void usb_tx_flow_ctrl(struct rwnx_txhdr *txhdr, struct aic_usb_dev *usb_d
 	u8 sta_idx;
 	unsigned long flags;
 
-	//printk("txdata: sta %d\n", txhdr->sw_hdr->desc.host.staid);
+	//pr_debug("txdata: sta %d\n", txhdr->sw_hdr->desc.host.staid);
 	sta_idx = txhdr->sw_hdr->desc.host.staid;
 	if(sta_idx < NX_REMOTE_STA_MAX && !(txhdr->sw_hdr->desc.host.flags & TXU_CNTRL_MGMT)) {
 		struct rwnx_vif *vif = NULL;
@@ -1646,7 +1646,7 @@ static void usb_tx_flow_ctrl(struct rwnx_txhdr *txhdr, struct aic_usb_dev *usb_d
 		vif = rwnx_hw->vif_table[sta->vif_idx];
 		spin_lock_irqsave(&usb_dev->tx_flow_lock, flags);
 		atomic_inc(&rwnx_hw->sta_flowctrl[sta_idx].tx_pending_cnt);
-		//printk("sta %d pending %d >= 64, flowctrl=%d\n", sta->sta_idx, sta->tx_pending_cnt, sta->flowctrl);
+		//pr_debug("sta %d pending %d >= 64, flowctrl=%d\n", sta->sta_idx, sta->tx_pending_cnt, sta->flowctrl);
 		if(RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_AP) {
 			if((atomic_read(&rwnx_hw->sta_flowctrl[sta_idx].tx_pending_cnt) >= AICWF_USB_FC_PERSTA_HIGH_WATER && rwnx_hw->sta_flowctrl[sta_idx].flowctrl == 0) ||
 										rwnx_hw->sta_flowctrl[sta_idx].flowctrl) {
@@ -1669,7 +1669,7 @@ static int aicwf_usb_bus_txdata(struct device *dev, struct sk_buff *pkt)
     struct aicwf_bus *bus_if = dev_get_drvdata(dev);
     struct aic_usb_dev *usbdev = bus_if->bus_priv.usb;
 
-    //printk("%s\n", __func__);
+    //pr_debug("%s\n", __func__);
     prio = (pkt->priority & 0x7);
     spin_lock_bh(&usbdev->tx_priv->txqlock);
     if (!aicwf_frame_enq(usbdev->dev, &usbdev->tx_priv->txq, pkt, prio)) {
@@ -1790,7 +1790,7 @@ static int aicwf_usb_bus_txdata(struct device *dev, struct sk_buff *skb)
 
 #ifndef CONFIG_USE_USB_ZERO_PACKET
 	if((buf_len % 512) == 0){
-		printk("%s send zero package buf_len: %d\r\n", __func__, buf_len);
+		pr_debug("%s send zero package buf_len: %d\r\n", __func__, buf_len);
 		if(txhdr->sw_hdr->need_cfm){
 			buf[buf_len] = 0x00;
 			buf_len = buf_len + 1;
@@ -2248,7 +2248,7 @@ static irqreturn_t rwnx_irq_handler(int irq, void *para)
     spin_lock_irqsave(&irq_lock, irqflags);
     disable_irq_nosync(hostwake_irq_num);
     //do something
-    printk("%s gpio irq trigger\r\n", __func__);
+    pr_debug("%s gpio irq trigger\r\n", __func__);
     spin_unlock_irqrestore(&irq_lock, irqflags);
     atomic_dec(&irq_count);
 	return IRQ_HANDLED;
@@ -2266,9 +2266,9 @@ static int rwnx_register_hostwake_irq(struct device *dev)
 //For Rockchip
 #ifdef CONFIG_PLATFORM_ROCKCHIP
 	hostwake_irq_num = rockchip_wifi_get_oob_irq();
-	printk("%s hostwake_irq_num:%d \r\n", __func__, hostwake_irq_num);
+	pr_debug("%s hostwake_irq_num:%d \r\n", __func__, hostwake_irq_num);
 	irq_flags = (IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE) & IRQF_TRIGGER_MASK;
-	printk("%s irq_flags:%d \r\n", __func__, irq_flags);
+	pr_debug("%s irq_flags:%d \r\n", __func__, irq_flags);
 	wakeup_enable = 1;
 #endif //CONFIG_PLATFORM_ROCKCHIP
 
@@ -2298,7 +2298,7 @@ static int rwnx_unregister_hostwake_irq(struct device *dev)
 {
 	wakeup_enable = 0;
 
-	printk("%s hostwake_irq_num:%d \r\n", __func__, hostwake_irq_num);
+	pr_debug("%s hostwake_irq_num:%d \r\n", __func__, hostwake_irq_num);
 	disable_irq_wake(hostwake_irq_num);
 	free_irq(hostwake_irq_num, NULL);
 
@@ -2558,7 +2558,7 @@ static void aicwf_usb_disconnect(struct usb_interface *intf)
 
 #if 0
 	if(timer_pending(&usb_dev->rwnx_hw->p2p_alive_timer) && usb_dev->rwnx_hw->is_p2p_alive == 1){
-		printk("%s del timer rwnx_hw->p2p_alive_timer \r\n", __func__);
+		pr_debug("%s del timer rwnx_hw->p2p_alive_timer \r\n", __func__);
 		rwnx_del_timer(&usb_dev->rwnx_hw->p2p_alive_timer);
 	}
 #endif
